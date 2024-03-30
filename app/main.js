@@ -1,4 +1,6 @@
 const net = require("net");
+const fs = require("fs");
+const path = require("path");
 
 // You can use print statements as follows for debugging, they'll be visible when running tests.
 console.log("Logs from your program will appear here!");
@@ -24,14 +26,11 @@ const server = net.createServer((socket) => {
       httpObj.headers[String(splitHeader[0])] = String(splitHeader[1]);
     });
 
-    const parsedPath = httpObj.path.replace("/echo/", "");
-    const parsedPathLength = parsedPath.length;
-
     if (httpObj.path == "/") {
-      socket.write(
-        `HTTP/1.1 200 OK\r\n\r\n`
-      );
+      socket.write(`HTTP/1.1 200 OK\r\n\r\n`);
     } else if (httpObj.path.startsWith("/echo")) {
+      const parsedPath = httpObj.path.replace("/echo/", "");
+      const parsedPathLength = parsedPath.length;
       socket.write(
         `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${parsedPathLength}\r\n\r\n${parsedPath}\r\n\r\n`
       );
@@ -39,8 +38,22 @@ const server = net.createServer((socket) => {
       socket.write(
         `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${httpObj.headers["User-Agent"].length}\r\n\r\n${httpObj.headers["User-Agent"]}\r\n\r\n`
       );
+    } else if (httpObj.path.startsWith("/files")) {
+      const directory = process.argv[3];
+      const filename = httpObj.path.replace("/files/", "");
+      fs.readFile(path.join(directory, filename), "utf8", (err, data) => {
+        if (err) {
+          socket.write(`HTTP/1.1 404 Not Found\r\n\r\n`);
+          socket.end();
+        } else {
+          socket.write(
+            `HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: ${data.length}\r\n\r\n${data}\r\n\r\n`
+          );
+        }
+      });
     } else {
       socket.write(`HTTP/1.1 404 Not Found\r\n\r\n`);
+      socket.end();
     }
   });
   socket.on("close", () => {
