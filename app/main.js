@@ -29,7 +29,7 @@ const server = net.createServer((socket) => {
 
     if (httpObj.path == "/") {
       socket.write(
-        `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${httpObj.headers["User-Agent"].length}\r\n\r\n${httpObj.headers["User-Agent"]}\r\n\r\n`
+        `HTTP/1.1 200 OK\r\n\r\n`
       );
     } else if (httpObj.path.startsWith("/echo")) {
       socket.write(
