@@ -9,11 +9,12 @@ const server = net.createServer((socket) => {
     const requestData = data.toString().split("\r\n");
     const httpStartLine = requestData[0].split(" ");
 
-    if (httpStartLine[1] == "/") {
-      socket.write("HTTP/1.1 200 OK\r\n\r\n");
-    } else {
-      socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
-    }
+    const parsedPath = httpStartLine[1].replace("/echo", "");
+    const parsedPathLength = parsedPath.length;
+
+    socket.write(
+      `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${parsedPathLength}\r\n\r\n ${parsedPath}\r\n\r\n`
+    );
   });
   socket.on("close", () => {
     socket.end();
