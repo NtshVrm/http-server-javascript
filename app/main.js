@@ -14,10 +14,12 @@ const server = net.createServer((socket) => {
       headers: {},
     };
 
-    const requestData = data.toString().split("\r\n\r\n")[0].split("\r\n");
+    const stringReq = data.toString().split("\r\n\r\n");
+    const requestData = stringReq[0].split("\r\n");
     const httpStartLine = requestData[0].split(" ");
     httpObj.method = httpStartLine[0];
     httpObj.path = httpStartLine[1];
+    httpObj.body = stringReq.length > 1 ? stringReq[1] : "";
 
     const requestHeaders = requestData.slice(1);
 
@@ -39,18 +41,35 @@ const server = net.createServer((socket) => {
         `HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ${httpObj.headers["User-Agent"].length}\r\n\r\n${httpObj.headers["User-Agent"]}\r\n\r\n`
       );
     } else if (httpObj.path.startsWith("/files")) {
-      const directory = process.argv[3];
-      const filename = httpObj.path.replace("/files/", "");
-      fs.readFile(path.join(directory, filename), "utf8", (err, data) => {
-        if (err) {
-          socket.write(`HTTP/1.1 404 Not Found\r\n\r\n`);
-          socket.end();
-        } else {
-          socket.write(
-            `HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: ${data.length}\r\n\r\n${data}\r\n\r\n`
-          );
-        }
-      });
+      if (httpObj.method == "GET") {
+        const directory = process.argv[3];
+        const filename = httpObj.path.replace("/files/", "");
+        fs.readFile(path.join(directory, filename), "utf8", (err, data) => {
+          if (err) {
+            socket.write(`HTTP/1.1 404 Not Found\r\n\r\n`);
+            socket.end();
+          } else {
+            socket.write(
+              `HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: ${data.length}\r\n\r\n${data}\r\n\r\n`
+            );
+          }
+        });
+      } else if (httpObj.method == "POST") {
+        const directory = process.argv[3];
+        const filename = httpObj.path.replace("/files/", "");
+        fs.writeFile(
+          path.join(directory, filename),
+          httpObj.body,
+          (err, data) => {
+            if (err) {
+              socket.write(`HTTP/1.1 404 Not Found\r\n\r\n`);
+              socket.end();
+            } else {
+              socket.write(`HTTP/1.1 201 Created\r\n\r\n`);
+            }
+          }
+        );
+      }
     } else {
       socket.write(`HTTP/1.1 404 Not Found\r\n\r\n`);
       socket.end();
